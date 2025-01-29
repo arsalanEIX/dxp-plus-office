@@ -1,0 +1,17 @@
+/* As per the specification, guaranteed-invalid value for CSS-Variables - https://www.w3.org/TR/css-variables-1/#guaranteed-invalid */
+
+@layer utilities {
+    :root {
+        /* Declare DXP Variables */
+        --dxp-primary: #000000; /*ask arslan*/
+        --dxp-secondary: #222222; /*dark gray*/
+        --dxp-accent: #ffcc00; /*yellow*/
+        --dxp-accent-secondary: #fff1e9; /*yellow ..*/
+        --dxp-t-primary: #ffffff; /*primary color for text*/
+        --dxp-t-secondary: #000000; /*secondary color for text*/
+        --dxp-placeholder: #BDBDBD; /*as highly suggested by waqasas highly suggested by waqas*/
+        --dxp-foreground: #ff8c5e; /*images background (faded purple)*/
+        --dxp-danger: #FF0000; /*Danger color*/
+        --dxp-font: nunito;  /* For Font Styles  */
+    }
+}

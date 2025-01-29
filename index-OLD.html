@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: 300;
+        background-color: #f5f5f5;
+      }
+    </style>
+  </head>
+
+  <body>
+    <p>DAM Panel</p>
+    <button id="addAssetsButton">Add Assets</button>
+  </body>
+
+  <script>
+    let addIn__Info
+
+    Office.onReady((info) => {
+      addIn__Info = { ...info }
+      if (addIn__Info.host === Office.HostType.Word) {
+        document.getElementById('addAssetsButton').onclick = initPanel
+      } else if (addIn__Info.host === Office.HostType.Excel) {
+        document.getElementById('addAssetsButton').onclick = initPanel
+      }
+    })
+
+    function initPanel() {
+      if (addIn__Info.host === Office.HostType.Word)
+        return Word.run((context) => {
+          // insert a paragraph at the start of the document.
+          const paragraph = context.document.body.insertParagraph('Hello World', Word.InsertLocation.start)
+
+          // sync the context to run the previous API call, and return.
+          return context.sync()
+        })
+      if (addIn__Info.host === Office.HostType.Excel) {
+        window.open('https://panel.dxp.plus', '_blank')
+        /*
+        return Excel.run((context) => {
+          // Insert text 'Hello world!' into cell A1.
+          context.workbook.worksheets.getActiveWorksheet().getRange('A1').values = [['Hello world!']]
+
+          // sync the context to run the previous API call, and return.
+          return context.sync()
+        })
+        */
+      }
+    }
+  </script>
+</html>

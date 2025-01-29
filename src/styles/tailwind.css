@@ -1,0 +1,5 @@
+@import './themes/variable.css'; /** import variable from this file */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
