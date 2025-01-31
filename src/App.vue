@@ -1,14 +1,14 @@
 <template>
-  <div class="max-w-64 h-full mx-auto font-sans flex flex-col p-2 mt-4">
+  <div class="max-w-lg w-96 h-full mx-auto font-sans flex flex-col p-2 mt-4">
     <div v-if="openSettings">
       <div class="font-semibold text-lg text-blue-900 mb-6">Settings</div>
       <div class="mb-4 text-sm">
         <div class="font-semibold text-blue-700">Panel Type</div>
-        <input class="outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged=true" placeholder="Enter Panel Type ..." v-model="panelType" />
+        <input class="w-full outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged = true" placeholder="Enter Panel Type ..." v-model="panelType" />
       </div>
       <div class="mb-4 text-sm">
         <div class="font-semibold text-blue-700">Connection Key</div>
-        <input class="outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged=true" placeholder="Enter Connection Key ..." v-model="connectionKey" />
+        <input class="w-full outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged = true" placeholder="Enter Connection Key ..." v-model="connectionKey" />
       </div>
       <div class="justify-center flex flex-row">
         <button
@@ -21,22 +21,15 @@
           Save
         </button>
 
-        <button
-          v-if="!settingsChanged"
-          class="border border-blue-700 hover:bg-blue-50 p-1 my-1 w-20 text-xs text-blue-700 rounded-sm"
-          v-on:click="toggleSettingsForm"
-        >
-          Cancel
-        </button>        
-
+        <button v-if="!settingsChanged" class="border border-blue-700 hover:bg-blue-50 p-1 my-1 w-20 text-xs text-blue-700 rounded-sm" v-on:click="toggleSettingsForm">Cancel</button>
       </div>
     </div>
 
     <div v-else>
-      <div class="font-semibold text-lg text-blue-900 mb-6">DAM Assets</div>
-      <div class="justify-center flex flex-col">
-        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm">Add Assets</button>
-        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm">Update to Latest</button>
+      <div class="font-semibold text-center text-lg text-blue-900 mb-6">DAM Panel</div>
+      <div class="justify-evenly flex flex-row flex-wrap">
+        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm" v-on:click="openDialog">Add Assets</button>
+        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm" v-on:click="validateAssets" >Update to Latest</button>
         <button class="border border-blue-700 hover:bg-blue-50 p-1 my-1 mt-8 w-32 text-xs text-blue-700 rounded-sm" v-on:click="toggleSettingsForm">Settings</button>
       </div>
     </div>
@@ -48,8 +41,6 @@ import { ref, watch, computed, onMounted, onBeforeUnmount, h } from 'vue'
 
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-
-
 
 const panelType = ref('')
 const connectionKey = ref('')
@@ -66,13 +57,9 @@ const toggleSettingsForm = () => {
 
 const saveEnabled = computed(() => connectionKey.value != '' && panelType.value != '')
 
-onMounted(async () => {
-  const tmpSettings = JSON.parse(localStorage.getItem('panelSettings'))
-  if (tmpSettings?.panelType) panelType.value = tmpSettings.panelType
-  if (tmpSettings?.connectionKey) connectionKey.value = tmpSettings.connectionKey
+const isVerifying = ref(false)
 
-  if (!panelSettings.value?.connectionKey || !panelSettings.value?.panelType) toggleSettingsForm()
-})
+// ------ ------ ------ ------ ------ ------ ------ ------ ------
 
 const parseStoryLinkConfig = (configStr) => {
   let configObj = {}
@@ -128,7 +115,7 @@ const verifyPanelConfigs = async () => {
 
     toast('Settings saved.', {
       theme: 'dark',
-      position: 'top-center',
+      position: 'bottom-center',
       type: 'info',
       autoClose: true,
     })
@@ -137,7 +124,7 @@ const verifyPanelConfigs = async () => {
   } catch (error) {
     toast(`${error}`, {
       theme: 'dark',
-      position: 'top-center',
+      position: 'bottom-center',
       type: 'error',
       autoClose: false,
     })
@@ -148,6 +135,225 @@ const savePanelSettings = async () => {
   if (panelSettings.value?.connectionKey || panelSettings.value?.panelType) {
     await verifyPanelConfigs()
   }
+}
+
+// ------ ------ ------ ------ ------ ------ ------ ------ ------
+
+onMounted(async () => {
+  const tmpSettings = JSON.parse(localStorage.getItem('panelSettings'))
+  if (tmpSettings?.panelType) panelType.value = tmpSettings.panelType
+  if (tmpSettings?.connectionKey) connectionKey.value = tmpSettings.connectionKey
+
+  if (!panelSettings.value?.connectionKey || !panelSettings.value?.panelType) toggleSettingsForm()
+})
+
+// ------ ------ ------ ------ ------ ------ ------ ------ ------
+
+let selCount, selTypes
+
+const showPanelPopup = () => {
+  // Check if popup Window is open
+  if (window.panelPopupWin) {
+    window.panelPopupWin.focus()
+    return { alreadyOpen: true }
+  }
+
+  // Get Params .. Instance params will take precedense if provided
+  let { panelType, connectionKey, selectionCount, selectionTypes, panelUrl, settingsUrl } = panelSettings.value
+  {
+    if (!selectionCount) selectionCount = 5
+    if (!selectionTypes) selectionTypes = 'image, video, document'
+
+    if (selectionTypes && !Array.isArray(selectionTypes)) {
+      selectionTypes = selectionTypes
+        .split(',')
+        .filter((x) => x)
+        .map((x) => `${x}`.trim().toLowerCase())
+    }
+  }
+
+  // Set popup dimensions
+  const w = 630,
+    h = 850
+  const left = 300
+  const top = 100
+
+  // Set the Panel Url based on the type of the panel
+  let __thePanelUrl
+  if (panelType === 'storylink') __thePanelUrl = 'https://panel.storylink.us'
+  else if (panelType === 'otmm') __thePanelUrl = 'https://panel.dxp.plus'
+
+  // Open popup
+  window.panelPopupWin = window.open(
+    panelUrl || __thePanelUrl,
+    '_blank',
+    `popup=yes,toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=no,copyhistory=no,width=${w},height=${h},top=${top},left=${left}`,
+  )
+
+  // Set global props
+  selCount = selectionCount || 5
+  selTypes = selectionTypes || []
+
+  return {
+    panelType,
+    connectionKey,
+    selectionCount,
+    selectionTypes,
+    settingsUrl,
+  }
+}
+
+const openDialog = async (_currentValue, _config, isValidating) => {
+  const panelInfo = showPanelPopup()
+
+  // TODO: cosnt _currentValue ... get a list of all current image/video/doc in the Office docs/xlsx/pptx
+
+  if (panelInfo.alreadyOpen !== true) {
+    const panelPopupListener = async (event) => {
+      const { type } = event.data
+
+      if (type === 'to.plugin.info') {
+        const msg = { type: 'from.plugin.info', panelInfo }
+        if (panelInfo.panelType === 'storylink') {
+          delete msg.panelInfo
+          msg.storyLinkInfo = { ...panelInfo }
+        }
+        window.panelPopupWin.postMessage(msg, '*')
+      }
+
+      if (type === 'to.plugin.ready') {
+        const { appConfig } = event.data
+        if (appConfig) window.panelPopupConfigs = { ...appConfig }
+      }
+
+      if (type === 'to.plugin.app.closed') {
+        window.removeEventListener('message', panelPopupListener)
+        if (window.panelPopupWin) window.panelPopupWin.close()
+        window.panelPopupWin = undefined
+      }
+
+      if (type === 'to.plugin.assets.place') {
+        const { assets } = event.data
+
+        if (!assets || !assets.length) {
+          toast('No content was selected.', {
+            theme: 'dark',
+            position: 'bottom-center',
+            type: 'error',
+            autoClose: true,
+          })
+
+          return
+        }
+
+        // Add assets to the new field value
+        let currentFieldValue = [] // TODO: cosnt currentAssets ... get a list of all current image/video/doc in the Office docs/xlsx/pptx
+
+        let newFieldValue = []
+        assets.reverse().forEach(async (asset) => {
+          // check for selection type
+          if (asset.previewType && !selTypes.includes(`${asset.previewType}`.toLowerCase())) {
+            toast(`[ ${asset.filename} ] - Invalid Type [${asset.previewType}]`, {
+              theme: 'dark',
+              position: 'bottom-center',
+              type: 'warn',
+              autoClose: true,
+            })
+            return
+          }
+
+          if (currentFieldValue.find((a) => a.versionId === asset.versionId)) {
+            toast(`[ ${asset.filename} ] - Already added to the list`, {
+              theme: 'dark',
+              position: 'bottom-center',
+              type: 'warn',
+              autoClose: true,
+            })
+            return
+          } else newFieldValue.push(asset)
+        })
+
+        // Merge with current .. slice up to the selCount if given
+        newFieldValue = [...newFieldValue, ...currentFieldValue].slice(0, selCount > 0 ? selCount : undefined)
+        debugger
+
+        // Set the new value
+        // TODO: Place each image/video from "newFieldValue" in the docx/xlsx/pptx
+      }
+    }
+    window.removeEventListener('message', panelPopupListener)
+    window.addEventListener('message', panelPopupListener)
+  }
+
+  return !isValidating ? _currentValue : { ...panelInfo, alreadyOpen: panelInfo.alreadyOpen === true }
+}
+
+async function validateAssets() {
+  // Check if there is anthing to validate
+
+  const currentAssets = [] // TODO: cosnt currentAssets ... get a list of all current image/video/doc in the Office docs/xlsx/pptx
+  if (!currentAssets.length) {
+    toast('There are no assets availalbe.', {
+      theme: 'dark',
+      position: 'bottom-center',
+      type: 'warn',
+      autoClose: true,
+    })
+
+    return
+  }
+
+  // Sender method for validate request
+  const sendValidateRequest = () => {
+    if (window.panelPopupWin) {
+      isVerifying.value = true
+      window.panelPopupWin.postMessage({ type: 'from.plugin.assets.validate', versionIds: currentAssets.map((e) => e.versionId) }, '*')
+    }
+  }
+
+  // Setup the listener for validation events
+  const validationPopupListener = async (event) => {
+    const { type } = event.data
+
+    if (type === 'to.plugin.ready') {
+      const { appConfig } = event.data
+      if (appConfig) window.panelPopupConfigs = { ...appConfig }
+      sendValidateRequest()
+    }
+
+    if (type === `to.plugin.assets.validated`) {
+      try {
+        const { assets } = event.data
+        if (!assets || !assets.length) {
+          toast('No assets were provided.', {
+            theme: 'dark',
+            position: 'bottom-center',
+            type: 'error',
+            autoClose: true,
+          })
+          // Notification.setPlacement('bottom', { offset: 0 })
+          // Notification.error(`No assets were provided.`)
+        } else {
+          const newFieldValue = assets.filter((asset) => asset.previewType && selTypes.includes(`${asset.previewType}`.toLowerCase())).slice(0, selCount > 0 ? selCount : undefined)
+          // TODO: Place each image/video from "newFieldValue" in the docx/xlsx/pptx
+        }
+      } finally {
+        isVerifying.value = false
+        window.removeEventListener('message', validationPopupListener)
+      }
+    }
+
+    if (type === 'to.plugin.app.closed') {
+      window.removeEventListener('message', validationPopupListener)
+      if (window.panelPopupWin) window.panelPopupWin.close()
+      window.panelPopupWin = undefined
+    }
+  }
+  window.removeEventListener('message', validationPopupListener)
+  window.addEventListener('message', validationPopupListener)
+
+  const { alreadyOpen } = await openDialog(null, null, true)
+  if (alreadyOpen === true) sendValidateRequest()
 }
 
 /*
@@ -280,14 +486,14 @@ const initializeThePanel = async () => {
         if (!otmmApp) {
           toast('Please wait for App to load then try again.', {
             theme: 'dark',
-            position: 'top-center',
+            position: 'bottom-center',
             type: 'warn',
             autoClose: false,
           })
         } else if (!versionIds || !versionIds.length) {
           toast('No Assets provided to validate.', {
             theme: 'dark',
-            position: 'top-center',
+            position: 'bottom-center',
             type: 'warn',
             autoClose: false,
           })
@@ -502,7 +708,7 @@ const linkAssetHandler = (promise) => {
     // Show a toast
     toast('Placing assets ...', {
       theme: 'dark',
-      position: 'top-center',
+      position: 'bottom-center',
       type: 'info',
       autoClose: 1000,
       closeOnClick: false,
@@ -649,14 +855,14 @@ const toastPromise = (thePromise, pendingMsg, successMsg, errorMsg) => {
         },
       },
     },
-    { theme: 'dark', position: 'top-center', closeOnClick: false, pauseOnHover: false, pauseOnFocusLoss: false },
+    { theme: 'dark', position: 'bottom-center', closeOnClick: false, pauseOnHover: false, pauseOnFocusLoss: false },
   )
 }
 
 const testNotify = () => {
   toast('Notify called ...', {
     theme: 'dark',
-    position: 'top-center',
+    position: 'bottom-center',
     closeOnClick: false,
     pauseOnHover: false,
     pauseOnFocusLoss: false,
