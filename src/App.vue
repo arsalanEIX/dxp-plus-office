@@ -1,6 +1,45 @@
 <template>
-  <div class="flex-grow">
-    <div>Office Add In</div>
+  <div class="max-w-64 h-full mx-auto font-sans flex flex-col p-2 mt-4">
+    <div v-if="openSettings">
+      <div class="font-semibold text-lg text-blue-900 mb-6">Settings</div>
+      <div class="mb-4 text-sm">
+        <div class="font-semibold text-blue-700">Panel Type</div>
+        <input class="outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged=true" placeholder="Enter Panel Type ..." v-model="panelType" />
+      </div>
+      <div class="mb-4 text-sm">
+        <div class="font-semibold text-blue-700">Connection Key</div>
+        <input class="outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged=true" placeholder="Enter Connection Key ..." v-model="connectionKey" />
+      </div>
+      <div class="justify-center flex flex-row">
+        <button
+          v-if="settingsChanged"
+          class="bg-blue-700 p-1 my-1 w-20 text-xs text-white rounded-sm"
+          :class="{ 'cursor-pointer hover:bg-blue-800': saveEnabled, 'opacity-50 cursor-not-allowed': !saveEnabled }"
+          :disabled="!saveEnabled"
+          v-on:click="savePanelSettings"
+        >
+          Save
+        </button>
+
+        <button
+          v-if="!settingsChanged"
+          class="border border-blue-700 hover:bg-blue-50 p-1 my-1 w-20 text-xs text-blue-700 rounded-sm"
+          v-on:click="toggleSettingsForm"
+        >
+          Cancel
+        </button>        
+
+      </div>
+    </div>
+
+    <div v-else>
+      <div class="font-semibold text-lg text-blue-900 mb-6">DAM Assets</div>
+      <div class="justify-center flex flex-col">
+        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm">Add Assets</button>
+        <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm">Update to Latest</button>
+        <button class="border border-blue-700 hover:bg-blue-50 p-1 my-1 mt-8 w-32 text-xs text-blue-700 rounded-sm" v-on:click="toggleSettingsForm">Settings</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -9,6 +48,107 @@ import { ref, watch, computed, onMounted, onBeforeUnmount, h } from 'vue'
 
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+
+
+
+const panelType = ref('')
+const connectionKey = ref('')
+const panelSettings = computed(() => {
+  return { panelType: panelType.value, connectionKey: connectionKey.value }
+})
+
+const openSettings = ref(false)
+const settingsChanged = ref(false)
+const toggleSettingsForm = () => {
+  openSettings.value = !openSettings.value
+  settingsChanged.value = false
+}
+
+const saveEnabled = computed(() => connectionKey.value != '' && panelType.value != '')
+
+onMounted(async () => {
+  const tmpSettings = JSON.parse(localStorage.getItem('panelSettings'))
+  if (tmpSettings?.panelType) panelType.value = tmpSettings.panelType
+  if (tmpSettings?.connectionKey) connectionKey.value = tmpSettings.connectionKey
+
+  if (!panelSettings.value?.connectionKey || !panelSettings.value?.panelType) toggleSettingsForm()
+})
+
+const parseStoryLinkConfig = (configStr) => {
+  let configObj = {}
+
+  configStr = configStr.replaceAll('window.STORYLINK_', '-----STORYLINK_')
+  configStr.split('-----').forEach((p) => {
+    let [key, val] = p.split('=')
+    if (key && key.trim() && val && val.trim())
+      try {
+        key = key.trim()
+        val = val.trim()
+
+        if (val.endsWith(';')) val = val.substring(0, val.length - 1)
+
+        if (val.startsWith(`'`) || val.startsWith(`"`)) val = val.substring(1)
+        if (val.endsWith(`'`) || val.endsWith(`"`)) val = val.substring(0, val.length - 1)
+
+        if (val.startsWith(`{`) && val.endsWith(`}`)) val = JSON.parse(val)
+        else if (val == 'true') val = true
+        else if (val == 'false') val = false
+        else if (val == 'undefined') val = undefined
+        else if (val == 'null') val = null
+
+        configObj[key] = val
+      } catch (e) {
+        console.log(`Problem in processing key ${key} .. ${e}`)
+      }
+  })
+
+  return configObj
+}
+
+const verifyPanelConfigs = async () => {
+  try {
+    if (!['otmm', 'storylink'].includes(panelSettings.value.panelType)) throw 'Invalid Panel Type'
+
+    const response = await fetch(`https://panel-settings.dxp.plus/${panelSettings.value.connectionKey}`, { method: 'GET', redirect: 'follow' })
+
+    if (response.status != 200) throw `Cannot load the configs for the connection key [${panelSettings.value.connectionKey}]`
+    else {
+      const result = await response.text()
+
+      if (panelSettings.value.panelType == 'storylink') {
+        const parserConfigResponse = parseStoryLinkConfig(result)
+        console.log('parserConfigResponse', parserConfigResponse)
+      } else {
+        const parserConfigResponse = JSON.parse(JSON.parse(result))
+        console.log('parserConfigResponse', parserConfigResponse)
+      }
+    }
+
+    localStorage.setItem('panelSettings', JSON.stringify(panelSettings.value))
+
+    toast('Settings saved.', {
+      theme: 'dark',
+      position: 'top-center',
+      type: 'info',
+      autoClose: true,
+    })
+
+    toggleSettingsForm()
+  } catch (error) {
+    toast(`${error}`, {
+      theme: 'dark',
+      position: 'top-center',
+      type: 'error',
+      autoClose: false,
+    })
+  }
+}
+
+const savePanelSettings = async () => {
+  if (panelSettings.value?.connectionKey || panelSettings.value?.panelType) {
+    await verifyPanelConfigs()
+  }
+}
 
 /*
 
@@ -533,7 +673,6 @@ const testNotify = () => {
 </script>
 
 <style>
-
 .pnlBtn {
   @apply px-4 py-[.1rem] mx-4 mt-2 cursor-pointer rounded-md leading-6 tracking-wider text-xs text-white bg-blue-900  hover:bg-blue-950;
 }
@@ -541,6 +680,4 @@ const testNotify = () => {
 .pnlBtnOutline {
   @apply px-4 py-[.1rem] mx-4 mt-2 cursor-pointer rounded-md leading-6 tracking-wider text-xs border border-blue-950 text-blue-900 hover:text-blue-950;
 }
-
-
 </style>
