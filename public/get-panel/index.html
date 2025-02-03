@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <script>
+      let officeInitCompleted = false
+
+      let gotoUrl = ''
+      if (window.location.search) {
+        const params = new URLSearchParams(window.location.search)
+        const panelType = params.get('panelType')
+        if (panelType == 'otmm') {
+          gotoUrl = 'https://panel.dxp.plus'
+        }
+        if (panelType == 'storylink') {
+          gotoUrl = 'https://panel.storylink.us'
+        }
+      }
+    </script>
+    <style>
+      iframe {
+        width: calc(100vw - 1.4rem);
+        height: calc(100vh - 1.4rem);
+        border: 0;
+        background-color: white;
+      }
+    </style>
+  </head>
+
+  <body>
+    <iframe id="__panelFrame__"></iframe>
+  </body>
+
+  <script>
+    Office.onReady(() => {
+      officeInitCompleted = true
+      // console.log('Office Loaded .. loading frame')
+
+      const panelFrame = document.getElementById('__panelFrame__')
+
+      Office.context.ui.addHandlerAsync(Office.EventType.DialogParentMessageReceived, (args) => {
+        console.log('Got message from Parent', args)
+        if (panelFrame?.contentWindow) panelFrame.contentWindow.postMessage(JSON.parse(args.message), '*')
+      })
+
+      const panelFrameListener = (event) => {
+        console.log('Rcvd message from Panel Frame - DATA', event.data)
+        if (event.data) Office.context.ui.messageParent(JSON.stringify({ data: event.data }))
+      }
+
+      window.removeEventListener('message', panelFrameListener)
+      window.addEventListener('message', panelFrameListener)
+
+      if (gotoUrl) panelFrame.setAttribute('src', gotoUrl)
+    })
+  </script>
+</html>

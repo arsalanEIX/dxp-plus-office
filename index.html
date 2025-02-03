@@ -21,6 +21,14 @@
     </script>
 
     <script type="module" src="/src/main.js"></script>
+
+    <script>
+      Office.onReady((info) => {
+        // console.log('Office onReady called')
+        window.officeInfo = { ...info }
+      })
+    </script>
+
   </body>
 
 </html>
