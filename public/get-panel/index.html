@@ -40,12 +40,12 @@
       const panelFrame = document.getElementById('__panelFrame__')
 
       Office.context.ui.addHandlerAsync(Office.EventType.DialogParentMessageReceived, (args) => {
-        console.log('Got message from Parent', args)
+        // console.log('Got message from Parent', args)
         if (panelFrame?.contentWindow) panelFrame.contentWindow.postMessage(JSON.parse(args.message), '*')
       })
 
       const panelFrameListener = (event) => {
-        console.log('Rcvd message from Panel Frame - DATA', event.data)
+        // console.log('Rcvd message from Panel Frame - DATA', event.data)
         if (event.data) Office.context.ui.messageParent(JSON.stringify({ data: event.data }))
       }
 

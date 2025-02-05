@@ -1,7 +1,10 @@
 <template>
   <div class="max-w-lg w-96 h-full mx-auto font-sans flex flex-col p-2 mt-4">
+    <img class="w-auto h-12 mx-auto" src="https://panel.dxp.plus/badge.png"/>
     <div v-if="openSettings">
-      <div class="font-semibold text-lg text-blue-900 mb-6">Settings</div>
+      <div class="font-semibold text-lg text-blue-900 mb-4 mt-2">
+        Settings
+      </div>
       <div class="mb-4 text-sm">
         <div class="font-semibold text-blue-700">Panel Type</div>
         <input class="w-full outline-none border border-blue-700 p-2 my-1 text-xs rounded-sm" v-on:change="settingsChanged = true" placeholder="Enter Panel Type ..." v-model="panelType" />
@@ -26,7 +29,7 @@
     </div>
 
     <div v-else>
-      <div class="font-semibold text-center text-lg text-blue-900 mb-6">DAM Panel</div>
+      <div class="font-semibold text-center text-sm text-blue-900 my-6"></div>
       <div class="justify-evenly flex flex-row flex-wrap">
         <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm" v-on:click="openDialog">Add Assets</button>
         <button class="bg-blue-700 hover:bg-blue-800 p-2 my-1 w-32 text-xs text-white rounded-sm" v-on:click="validateAssets">Update to Latest</button>
