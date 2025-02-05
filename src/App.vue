@@ -54,7 +54,8 @@ const panelSettings = computed(() => {
 const openSettings = ref(false)
 const settingsChanged = ref(false)
 const toggleSettingsForm = () => {
-  openSettings.value = !openSettings.value
+  if (!panelSettings.value?.connectionKey || !panelSettings.value?.panelType) openSettings.value = true
+  else openSettings.value = !openSettings.value
   settingsChanged.value = false
 }
 
